@@ -1,14 +1,12 @@
-import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radius } from "../constants/theme";
-import { StockStatus } from "../types";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, fonts, radius } from '../constants/theme';
+import { StockStatus } from '../types';
 
-const STATUS_MAP: Record<
-  StockStatus,
-  { label: string; bg: string; fg: string }
-> = {
-  normal: { label: "Normal", bg: colors.successBg, fg: colors.success },
-  bajo: { label: "Bajo", bg: colors.warningBg, fg: colors.warning },
-  sin_stock: { label: "Sin stock", bg: colors.dangerBg, fg: colors.danger },
+const STATUS_MAP: Record<StockStatus, { label: string; bg: string; fg: string }> = {
+  normal: { label: 'Normal', bg: colors.successBg, fg: colors.success },
+  bajo: { label: 'Bajo', bg: colors.warningBg, fg: colors.warning },
+  sin_stock: { label: 'Sin stock', bg: colors.dangerBg, fg: colors.danger },
 };
 
 export default function StatusBadge({ status }: { status: StockStatus }) {
@@ -25,7 +23,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radius.full,
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   text: {
     fontFamily: fonts.semiBold,

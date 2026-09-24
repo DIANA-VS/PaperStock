@@ -1,14 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import {
-    FlatList,
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
-import { colors, fonts, radius, spacing } from "../constants/theme";
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Modal, FlatList } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fonts, radius, spacing } from '../constants/theme';
 
 interface Option {
   label: string;
@@ -25,15 +18,7 @@ interface Props {
   error?: string;
 }
 
-export default function SelectField({
-  label,
-  required,
-  placeholder = "Selecciona una opción",
-  value,
-  options,
-  onSelect,
-  error,
-}: Props) {
+export default function SelectField({ label, required, placeholder = 'Selecciona una opción', value, options, onSelect, error }: Props) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
 
@@ -43,10 +28,7 @@ export default function SelectField({
         {label}
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
-      <Pressable
-        style={[styles.select, error ? styles.selectError : null]}
-        onPress={() => setOpen(true)}
-      >
+      <Pressable style={[styles.select, error ? styles.selectError : null]} onPress={() => setOpen(true)}>
         <Text style={[styles.selectText, !selected && styles.placeholder]}>
           {selected ? selected.label : placeholder}
         </Text>
@@ -54,12 +36,7 @@ export default function SelectField({
       </Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Modal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
-      >
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={styles.sheet}>
             <Text style={styles.sheetTitle}>{label}</Text>
@@ -76,18 +53,10 @@ export default function SelectField({
                   }}
                 >
                   <Text style={styles.optionText}>{item.label}</Text>
-                  {item.value === value && (
-                    <Ionicons
-                      name="checkmark"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  )}
+                  {item.value === value && <Ionicons name="checkmark" size={18} color={colors.primary} />}
                 </Pressable>
               )}
-              ListEmptyComponent={
-                <Text style={styles.empty}>No hay opciones disponibles.</Text>
-              }
+              ListEmptyComponent={<Text style={styles.empty}>No hay opciones disponibles.</Text>}
             />
           </View>
         </Pressable>
@@ -98,12 +67,7 @@ export default function SelectField({
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.md },
-  label: {
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    color: colors.textDark,
-    marginBottom: 6,
-  },
+  label: { fontFamily: fonts.medium, fontSize: 13, color: colors.textDark, marginBottom: 6 },
   required: { color: colors.danger },
   select: {
     backgroundColor: colors.card,
@@ -112,27 +76,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.sm + 4,
     paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   selectError: { borderColor: colors.danger },
-  selectText: {
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    color: colors.textDark,
-  },
+  selectText: { fontFamily: fonts.regular, fontSize: 14, color: colors.textDark },
   placeholder: { color: colors.textMuted },
-  error: {
-    fontFamily: fonts.regular,
-    fontSize: 12,
-    color: colors.danger,
-    marginTop: 4,
-  },
+  error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger, marginTop: 4 },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: colors.card,
@@ -151,19 +106,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  optionText: {
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    color: colors.textDark,
-  },
-  empty: {
-    fontFamily: fonts.regular,
-    color: colors.textMuted,
-    textAlign: "center",
-    paddingVertical: spacing.lg,
-  },
+  optionText: { fontFamily: fonts.regular, fontSize: 14, color: colors.textDark },
+  empty: { fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.lg },
 });

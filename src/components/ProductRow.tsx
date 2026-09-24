@@ -1,8 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radius, shadow, spacing } from "../constants/theme";
-import { Category, getStockStatus, Product } from "../types";
-import StatusBadge from "./StatusBadge";
+import React from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fonts, radius, shadow, spacing } from '../constants/theme';
+import { Product, Category, getStockStatus } from '../types';
+import StatusBadge from './StatusBadge';
 
 interface Props {
   product: Product;
@@ -11,35 +12,17 @@ interface Props {
   showPrice?: boolean;
 }
 
-export default function ProductRow({
-  product,
-  category,
-  onPress,
-  showPrice = true,
-}: Props) {
+export default function ProductRow({ product, category, onPress, showPrice = true }: Props) {
   const status = getStockStatus(product);
 
   return (
     <Pressable style={styles.row} onPress={onPress}>
-      <View
-        style={[
-          styles.iconWrap,
-          { backgroundColor: category?.color ?? colors.gray },
-        ]}
-      >
-        <Ionicons
-          name={(category?.icon as any) ?? "cube-outline"}
-          size={20}
-          color={colors.textDark}
-        />
+      <View style={[styles.iconWrap, { backgroundColor: category?.color ?? colors.gray }]}>
+        <Ionicons name={(category?.icon as any) ?? 'cube-outline'} size={20} color={colors.textDark} />
       </View>
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
-          {product.name}
-        </Text>
-        <Text style={styles.category} numberOfLines={1}>
-          {category?.name ?? "Sin categoría"}
-        </Text>
+        <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
+        <Text style={styles.category} numberOfLines={1}>{category?.name ?? 'Sin categoría'}</Text>
       </View>
       <View style={styles.right}>
         {showPrice ? (
@@ -55,8 +38,8 @@ export default function ProductRow({
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: radius.md,
     padding: spacing.sm + 4,
@@ -67,8 +50,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: spacing.sm + 2,
   },
   info: {
@@ -87,7 +70,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   right: {
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
   },
   price: {
     fontFamily: fonts.semiBold,

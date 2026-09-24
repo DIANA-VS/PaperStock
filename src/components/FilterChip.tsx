@@ -1,20 +1,10 @@
-import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, fonts, radius } from "../constants/theme";
+import React from 'react';
+import { Pressable, Text, StyleSheet } from 'react-native';
+import { colors, fonts, radius } from '../constants/theme';
 
-export default function FilterChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+export default function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable
-      style={[styles.chip, active && styles.chipActive]}
-      onPress={onPress}
-    >
+    <Pressable style={[styles.chip, active && styles.chipActive]} onPress={onPress}>
       <Text style={[styles.text, active && styles.textActive]}>{label}</Text>
     </Pressable>
   );
@@ -37,6 +27,6 @@ const styles = StyleSheet.create({
     color: colors.textDark,
   },
   textActive: {
-    color: "#fff",
+    color: '#fff',
   },
 });

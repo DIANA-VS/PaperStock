@@ -1,11 +1,6 @@
-import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TextInputProps,
-    View,
-} from "react-native";
-import { colors, fonts, radius, spacing } from "../constants/theme";
+import React from 'react';
+import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
+import { colors, fonts, radius, spacing } from '../constants/theme';
 
 interface Props extends TextInputProps {
   label: string;
@@ -13,13 +8,7 @@ interface Props extends TextInputProps {
   error?: string;
 }
 
-export default function FormField({
-  label,
-  required,
-  error,
-  style,
-  ...rest
-}: Props) {
+export default function FormField({ label, required, error, style, ...rest }: Props) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>

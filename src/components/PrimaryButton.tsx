@@ -1,31 +1,19 @@
-import {
-    ActivityIndicator,
-    Pressable,
-    StyleSheet,
-    Text,
-    ViewStyle,
-} from "react-native";
-import { colors, fonts, radius } from "../constants/theme";
+import React from 'react';
+import { Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
+import { colors, fonts, radius, spacing } from '../constants/theme';
 
 interface Props {
   title: string;
   onPress?: () => void;
   loading?: boolean;
   disabled?: boolean;
-  variant?: "primary" | "outline" | "danger";
+  variant?: 'primary' | 'outline' | 'danger';
   style?: ViewStyle;
 }
 
-export default function PrimaryButton({
-  title,
-  onPress,
-  loading,
-  disabled,
-  variant = "primary",
-  style,
-}: Props) {
-  const isOutline = variant === "outline";
-  const isDanger = variant === "danger";
+export default function PrimaryButton({ title, onPress, loading, disabled, variant = 'primary', style }: Props) {
+  const isOutline = variant === 'outline';
+  const isDanger = variant === 'danger';
 
   return (
     <Pressable
@@ -42,11 +30,9 @@ export default function PrimaryButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isOutline ? colors.primary : "#fff"} />
+        <ActivityIndicator color={isOutline ? colors.primary : '#fff'} />
       ) : (
-        <Text style={[styles.text, isOutline && styles.textOutline]}>
-          {title}
-        </Text>
+        <Text style={[styles.text, isOutline && styles.textOutline]}>{title}</Text>
       )}
     </Pressable>
   );
@@ -56,14 +42,14 @@ const styles = StyleSheet.create({
   base: {
     borderRadius: radius.md,
     paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primary: {
     backgroundColor: colors.primary,
   },
   outline: {
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: colors.primary,
   },
@@ -76,7 +62,7 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: fonts.semiBold,
     fontSize: 15,
-    color: "#fff",
+    color: '#fff',
   },
   textOutline: {
     color: colors.primary,

@@ -1,6 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
-import { colors, fonts, radius, shadow, spacing } from "../constants/theme";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fonts, radius, shadow, spacing } from '../constants/theme';
 
 interface Props {
   icon: keyof typeof Ionicons.glyphMap;
@@ -10,13 +11,7 @@ interface Props {
   iconColor?: string;
 }
 
-export default function StatCard({
-  icon,
-  label,
-  value,
-  bgColor,
-  iconColor = colors.textDark,
-}: Props) {
+export default function StatCard({ icon, label, value, bgColor, iconColor = colors.textDark }: Props) {
   return (
     <View style={[styles.card, { backgroundColor: bgColor }]}>
       <View style={styles.iconWrap}>
@@ -30,7 +25,7 @@ export default function StatCard({
 
 const styles = StyleSheet.create({
   card: {
-    flexBasis: "48%",
+    flexBasis: '48%',
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -40,9 +35,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   value: {

@@ -64,9 +64,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="categorias" options={{ href: null }} />
       <Tabs.Screen name="alertas" options={{ href: null }} />
       <Tabs.Screen name="notificaciones" options={{ href: null }} />
-      <Tabs.Screen name="editar-perfil" options={{ href: null }} />
-      <Tabs.Screen name="cambiar-contrasena" options={{ href: null }} />
-      <Tabs.Screen name="ayuda" options={{ href: null }} />
     </Tabs>
   );
 }

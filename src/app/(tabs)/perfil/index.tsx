@@ -1,14 +1,14 @@
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../context/AuthContext';
-import { colors, fonts, radius, shadow, spacing } from '../../constants/theme';
+import { useAuth } from '../../../context/AuthContext';
+import { colors, fonts, radius, shadow, spacing } from '../../../constants/theme';
 
 const MENU_ITEMS: { icon: keyof typeof Ionicons.glyphMap; label: string; route: string }[] = [
-  { icon: 'person-outline', label: 'Editar perfil', route: '/(tabs)/editar-perfil' },
-  { icon: 'lock-closed-outline', label: 'Cambiar contraseña', route: '/(tabs)/cambiar-contrasena' },
+  { icon: 'person-outline', label: 'Editar perfil', route: '/(tabs)/perfil/editar-perfil' },
+  { icon: 'lock-closed-outline', label: 'Cambiar contraseña', route: '/(tabs)/perfil/cambiar-contrasena' },
   { icon: 'notifications-outline', label: 'Notificaciones', route: '/(tabs)/notificaciones' },
-  { icon: 'help-circle-outline', label: 'Ayuda', route: '/(tabs)/ayuda' },
+  { icon: 'help-circle-outline', label: 'Ayuda', route: '/(tabs)/perfil/ayuda' },
 ];
 
 export default function PerfilScreen() {

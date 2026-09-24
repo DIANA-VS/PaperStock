@@ -1,24 +1,12 @@
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, TextInput, View } from "react-native";
-import { colors, fonts, radius, spacing } from "../constants/theme";
+import React from 'react';
+import { View, TextInput, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fonts, radius, spacing } from '../constants/theme';
 
-export default function SearchBar({
-  value,
-  onChangeText,
-  placeholder = "Buscar...",
-}: {
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder?: string;
-}) {
+export default function SearchBar({ value, onChangeText, placeholder = 'Buscar...' }: { value: string; onChangeText: (v: string) => void; placeholder?: string }) {
   return (
     <View style={styles.wrap}>
-      <Ionicons
-        name="search"
-        size={18}
-        color={colors.textMuted}
-        style={{ marginRight: 8 }}
-      />
+      <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -32,8 +20,8 @@ export default function SearchBar({
 
 const styles = StyleSheet.create({
   wrap: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.card,
     borderRadius: radius.md,
     borderWidth: 1,
