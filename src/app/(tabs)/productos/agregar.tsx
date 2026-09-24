@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../../../context/InventoryContext';
@@ -46,7 +46,7 @@ export default function AgregarProducto() {
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textDark} />
@@ -57,7 +57,7 @@ export default function AgregarProducto() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
         <FormField label="Nombre del producto" required placeholder="Ej. Cuaderno profesional" value={name} onChangeText={setName} error={errors.name} />
 
         <SelectField
@@ -95,7 +95,7 @@ export default function AgregarProducto() {
 
         <PrimaryButton title="Guardar" onPress={handleSave} style={{ marginTop: spacing.sm }} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

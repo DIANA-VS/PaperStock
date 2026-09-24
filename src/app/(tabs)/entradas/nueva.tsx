@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../../../context/InventoryContext';
@@ -39,7 +39,7 @@ export default function NuevaEntrada() {
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textDark} />
@@ -48,7 +48,7 @@ export default function NuevaEntrada() {
         <View style={styles.iconBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
         <FormField label="Proveedor" required placeholder="Selecciona un proveedor" value={supplier} onChangeText={setSupplier} error={errors.supplier} />
 
         <SelectField
@@ -69,7 +69,7 @@ export default function NuevaEntrada() {
 
         <PrimaryButton title="Guardar" onPress={handleSave} style={{ marginTop: spacing.sm }} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

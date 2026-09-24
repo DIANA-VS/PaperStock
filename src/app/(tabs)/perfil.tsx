@@ -4,11 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { colors, fonts, radius, shadow, spacing } from '../../constants/theme';
 
-const MENU_ITEMS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
-  { icon: 'person-outline', label: 'Editar perfil' },
-  { icon: 'lock-closed-outline', label: 'Cambiar contraseña' },
-  { icon: 'notifications-outline', label: 'Notificaciones' },
-  { icon: 'help-circle-outline', label: 'Ayuda' },
+const MENU_ITEMS: { icon: keyof typeof Ionicons.glyphMap; label: string; route: string }[] = [
+  { icon: 'person-outline', label: 'Editar perfil', route: '/(tabs)/editar-perfil' },
+  { icon: 'lock-closed-outline', label: 'Cambiar contraseña', route: '/(tabs)/cambiar-contrasena' },
+  { icon: 'notifications-outline', label: 'Notificaciones', route: '/(tabs)/notificaciones' },
+  { icon: 'help-circle-outline', label: 'Ayuda', route: '/(tabs)/ayuda' },
 ];
 
 export default function PerfilScreen() {
@@ -47,7 +47,7 @@ export default function PerfilScreen() {
 
       <View style={styles.menu}>
         {MENU_ITEMS.map((item) => (
-          <Pressable key={item.label} style={styles.menuItem}>
+          <Pressable key={item.label} style={styles.menuItem} onPress={() => router.push(item.route as any)}>
             <View style={styles.menuIconWrap}>
               <Ionicons name={item.icon} size={18} color={colors.textDark} />
             </View>

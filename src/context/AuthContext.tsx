@@ -8,6 +8,7 @@ interface AuthContextType {
   user: UserProfile | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
+  updateProfile: (name: string, email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,8 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoggedIn(false);
   };
 
+  const updateProfile = async (name: string, email: string) => {
+    if (!user) return;
+    const updated: UserProfile = { ...user, name, email };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    setUser(updated);
+  };
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, user, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn, isLoading, user, login, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

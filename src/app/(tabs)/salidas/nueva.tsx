@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../../../context/InventoryContext';
@@ -41,7 +41,7 @@ export default function NuevaSalida() {
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.textDark} />
@@ -50,7 +50,7 @@ export default function NuevaSalida() {
         <View style={styles.iconBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>
           Tipo de salida <Text style={{ color: colors.danger }}>*</Text>
         </Text>
@@ -99,7 +99,7 @@ export default function NuevaSalida() {
 
         <PrimaryButton title="Guardar" onPress={handleSave} style={{ marginTop: spacing.sm }} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
