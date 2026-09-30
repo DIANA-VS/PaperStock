@@ -60,9 +60,9 @@ export default function DetalleProducto() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    updateProduct(product.id, {
+    await updateProduct(product.id, {
       name: name.trim(),
       categoryId,
       description: description.trim() || undefined,
@@ -77,7 +77,7 @@ export default function DetalleProducto() {
   const handleDelete = () => {
     Alert.alert('Eliminar producto', `¿Seguro que quieres eliminar "${product.name}"? Esta acción no se puede deshacer.`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => { deleteProduct(product.id); router.back(); } },
+      { text: 'Eliminar', style: 'destructive', onPress: async () => { await deleteProduct(product.id); router.back(); } },
     ]);
   };
 

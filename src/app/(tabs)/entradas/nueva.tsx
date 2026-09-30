@@ -27,10 +27,10 @@ export default function NuevaEntrada() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setGeneralError('');
     if (!validate()) return;
-    const result = registerEntrada(productId, Number(quantity), supplier.trim(), note.trim() || undefined);
+    const result = await registerEntrada(productId, Number(quantity), supplier.trim(), note.trim() || undefined);
     if (!result.ok) {
       setGeneralError(result.error ?? 'No se pudo registrar la entrada.');
       return;

@@ -31,9 +31,9 @@ export default function AgregarProducto() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    addProduct({
+    await addProduct({
       name: name.trim(),
       categoryId,
       description: description.trim() || undefined,

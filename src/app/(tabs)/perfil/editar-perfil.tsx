@@ -13,18 +13,12 @@ export default function EditarPerfil() {
   const [email, setEmail] = useState(user?.email ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validate = () => {
-    const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = 'El nombre es obligatorio.';
-    if (!email.trim()) errs.email = 'El correo es obligatorio.';
-    else if (!email.includes('@')) errs.email = 'Ingresa un correo válido.';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   const handleSave = async () => {
-    if (!validate()) return;
-    await updateProfile(name.trim(), email.trim());
+    if (!name.trim()) {
+      setErrors({ name: 'El nombre es obligatorio.' });
+      return;
+    }
+    await updateProfile(name.trim(), user?.email ?? '');
     Alert.alert('Listo', 'Tu perfil se actualizó correctamente.', [
       { text: 'OK', onPress: () => router.back() },
     ]);
@@ -46,14 +40,11 @@ export default function EditarPerfil() {
         <FormField label="Nombre" required placeholder="Tu nombre" value={name} onChangeText={setName} error={errors.name} />
         <FormField
           label="Correo"
-          required
-          placeholder="tucorreo@ejemplo.com"
-          autoCapitalize="none"
-          keyboardType="email-address"
           value={email}
-          onChangeText={setEmail}
-          error={errors.email}
+          editable={false}
+          style={{ opacity: 0.6 }}
         />
+        <Text style={styles.hint}>El correo no se puede cambiar por seguridad de la cuenta.</Text>
         <PrimaryButton title="Guardar cambios" onPress={handleSave} style={{ marginTop: spacing.sm }} />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -68,4 +59,5 @@ const styles = StyleSheet.create({
   },
   iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: fonts.semiBold, fontSize: 16, color: colors.textDark },
+  hint: { fontFamily: fonts.regular, fontSize: 11, color: colors.textMuted, marginTop: -8, marginBottom: spacing.md },
 });

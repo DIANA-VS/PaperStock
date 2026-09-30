@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { updatePassword } from 'firebase/auth';
+import { auth } from '../../../constants/firebaseConfig';
 import { colors, fonts, spacing } from '../../../constants/theme';
 import FormField from '../../../components/FormField';
 import PrimaryButton from '../../../components/PrimaryButton';
@@ -15,17 +17,36 @@ export default function CambiarContrasena() {
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!current.trim()) errs.current = 'Ingresa tu contraseña actual.';
-    if (!nueva.trim() || nueva.length < 4) errs.nueva = 'La nueva contraseña debe tener al menos 4 caracteres.';
+    if (!nueva.trim() || nueva.length < 6) errs.nueva = 'La nueva contraseña debe tener al menos 6 caracteres.';
     if (nueva !== confirmar) errs.confirmar = 'Las contraseñas no coinciden.';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    Alert.alert('Listo', 'Tu contraseña se actualizó correctamente.', [
-      { text: 'OK', onPress: () => router.back() },
-    ]);
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        Alert.alert('Error', 'No se encontró tu sesión activa.');
+        return;
+      }
+      const { EmailAuthProvider, reauthenticateWithCredential } = await import('firebase/auth');
+      const credential = EmailAuthProvider.credential(user.email, current);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, nueva);
+      Alert.alert('Listo', 'Tu contraseña se actualizó correctamente.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setErrors({ current: 'Tu contraseña actual no es correcta.' });
+      } else if (err.code === 'auth/weak-password') {
+        setErrors({ nueva: 'La contraseña debe tener al menos 6 caracteres.' });
+      } else {
+        Alert.alert('Error', 'No se pudo actualizar la contraseña. Intenta de nuevo.');
+      }
+    }
   };
 
   return (

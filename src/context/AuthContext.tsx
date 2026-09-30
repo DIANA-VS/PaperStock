@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  updateProfile as firebaseUpdateProfile,
+} from 'firebase/auth';
+import { auth } from '../constants/firebaseConfig';
 import { UserProfile } from '../types';
 
 interface AuthContextType {
@@ -13,7 +20,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = '@paperstock_auth';
+function translateError(code?: string) {
+  switch (code) {
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Correo o contraseña incorrectos.';
+    case 'auth/invalid-email':
+      return 'El correo no es válido.';
+    case 'auth/weak-password':
+      return 'La contraseña debe tener al menos 6 caracteres.';
+    case 'auth/email-already-in-use':
+      return 'Ese correo ya está registrado con otra contraseña.';
+    case 'auth/network-request-failed':
+      return 'No hay conexión a internet. Revisa tu WiFi/datos.';
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos. Espera un momento e intenta de nuevo.';
+    default:
+      return 'No se pudo iniciar sesión. Intenta de nuevo.';
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -21,49 +46,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const saved = JSON.parse(raw);
-          setIsLoggedIn(true);
-          setUser(saved);
-        }
-      } finally {
-        setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        setUser({
+          name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuario',
+          email: fbUser.email || '',
+          role: 'Administrador',
+        });
+        setIsLoggedIn(true);
+      } else {
+        setUser(null);
+        setIsLoggedIn(false);
       }
-    })();
+      setIsLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
   const login = async (email: string, password: string) => {
     if (!email.trim() || !password.trim()) {
       return { ok: false, error: 'Ingresa tu correo y contraseña.' };
     }
-    if (password.length < 4) {
-      return { ok: false, error: 'La contraseña debe tener al menos 4 caracteres.' };
+    if (password.length < 6) {
+      return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres.' };
     }
-    const profile: UserProfile = {
-      name: email.split('@')[0] || 'Usuario',
-      email,
-      role: 'Administrador',
-    };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-    setUser(profile);
-    setIsLoggedIn(true);
-    return { ok: true };
+
+    try {
+      // Primero intenta iniciar sesión con una cuenta existente
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      return { ok: true };
+    } catch (err: any) {
+      // Si la cuenta no existe todavía, la creamos automáticamente
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        try {
+          const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+          await firebaseUpdateProfile(credential.user, {
+            displayName: email.split('@')[0],
+          });
+          return { ok: true };
+        } catch (createErr: any) {
+          return { ok: false, error: translateError(createErr.code) };
+        }
+      }
+      return { ok: false, error: translateError(err.code) };
+    }
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-    setUser(null);
-    setIsLoggedIn(false);
+    await signOut(auth);
   };
 
   const updateProfile = async (name: string, email: string) => {
-    if (!user) return;
-    const updated: UserProfile = { ...user, name, email };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setUser(updated);
+    if (!auth.currentUser) return;
+    await firebaseUpdateProfile(auth.currentUser, { displayName: name });
+    setUser((prev) => (prev ? { ...prev, name, email } : prev));
   };
 
   return (

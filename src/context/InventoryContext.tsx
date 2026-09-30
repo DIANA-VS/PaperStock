@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  collection,
+  onSnapshot,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  writeBatch,
+  query,
+  orderBy,
+} from 'firebase/firestore';
+import { db } from '../constants/firebaseConfig';
 import {
   Category,
   Product,
@@ -8,9 +20,7 @@ import {
   getStockStatus,
 } from '../types';
 
-const STORAGE_KEY = '@paperstock_inventory_v1';
-
-const initialCategories: Category[] = [
+const initialCategories: (Category & { id: string })[] = [
   { id: 'cat-1', name: 'Cuadernos', icon: 'book-outline', color: '#C8E6C9' },
   { id: 'cat-2', name: 'Escritura', icon: 'pencil-outline', color: '#A7D8FF' },
   { id: 'cat-3', name: 'Colores', icon: 'color-palette-outline', color: '#FFD6E7' },
@@ -21,7 +31,7 @@ const initialCategories: Category[] = [
   { id: 'cat-8', name: 'Impresión', icon: 'print-outline', color: '#C8E6C9' },
 ];
 
-const initialProducts: Product[] = [
+const initialProducts: (Product & { id: string })[] = [
   { id: 'p-1', name: 'Cuaderno profesional', categoryId: 'cat-1', description: 'Cuaderno de 100 hojas, raya', price: 45, quantity: 50, minStock: 10, supplier: 'Papelería Luna' },
   { id: 'p-2', name: 'Pluma de gel', categoryId: 'cat-2', description: 'Pluma de gel punto fino, negra', price: 12, quantity: 25, minStock: 10, supplier: 'Distribuidora escolar' },
   { id: 'p-3', name: 'Resaltador amarillo', categoryId: 'cat-2', description: 'Resaltador punta biselada', price: 15, quantity: 4, minStock: 8, supplier: 'Distribuidora escolar' },
@@ -32,7 +42,7 @@ const initialProducts: Product[] = [
   { id: 'p-8', name: 'Plumones', categoryId: 'cat-2', description: 'Set de 6 plumones', price: 30, quantity: 10, minStock: 12, supplier: 'Papelería del Centro' },
 ];
 
-const initialMovements: Movement[] = [
+const initialMovements: (Movement & { id: string })[] = [
   { id: 'm-1', type: 'entrada', productId: 'p-1', quantity: 30, date: new Date('2026-09-10').toISOString(), supplier: 'Papelería Luna', note: 'Compra #0001' },
   { id: 'm-2', type: 'salida', productId: 'p-2', quantity: 5, date: new Date('2026-09-09').toISOString(), client: 'Cliente mostrador', reason: 'venta' },
   { id: 'm-3', type: 'entrada', productId: 'p-5', quantity: 20, date: new Date('2026-09-07').toISOString(), supplier: 'Distribuidora escolar', note: 'Compra #0003' },
@@ -44,13 +54,13 @@ interface InventoryContextType {
   movements: Movement[];
   notifications: AppNotification[];
   isLoading: boolean;
-  addProduct: (p: Omit<Product, 'id'>) => void;
-  updateProduct: (id: string, p: Omit<Product, 'id'>) => void;
-  deleteProduct: (id: string) => void;
-  addCategory: (name: string, icon: string, color: string) => void;
-  registerEntrada: (productId: string, quantity: number, supplier: string, note?: string) => { ok: boolean; error?: string };
-  registerSalida: (productId: string, quantity: number, client: string, reason: 'venta' | 'uso_interno', note?: string) => { ok: boolean; error?: string };
-  markNotificationRead: (id: string) => void;
+  addProduct: (p: Omit<Product, 'id'>) => Promise<void>;
+  updateProduct: (id: string, p: Omit<Product, 'id'>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  addCategory: (name: string, icon: string, color: string) => Promise<void>;
+  registerEntrada: (productId: string, quantity: number, supplier: string, note?: string) => Promise<{ ok: boolean; error?: string }>;
+  registerSalida: (productId: string, quantity: number, client: string, reason: 'venta' | 'uso_interno', note?: string) => Promise<{ ok: boolean; error?: string }>;
+  markNotificationRead: (id: string) => Promise<void>;
   getProduct: (id: string) => Product | undefined;
   getCategory: (id: string) => Category | undefined;
 }
@@ -58,77 +68,98 @@ interface InventoryContextType {
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [movements, setMovements] = useState<Movement[]>(initialMovements);
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    { id: 'n-1', title: 'Nueva entrada', message: 'Se registró una nueva entrada de productos.', date: new Date('2026-09-21').toISOString(), type: 'entrada', read: false },
-    { id: 'n-2', title: 'Salida registrada', message: 'Se registró una salida de productos.', date: new Date('2026-09-21').toISOString(), type: 'salida', read: false },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [movements, setMovements] = useState<Movement[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [seeded, setSeeded] = useState(false);
 
-  // Cargar de AsyncStorage al iniciar
+  // La primera vez que alguien abre la app, si la base de datos está vacía,
+  // la llenamos con datos de ejemplo para que no arranque vacía.
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const saved = JSON.parse(raw);
-          if (saved.categories) setCategories(saved.categories);
-          if (saved.products) setProducts(saved.products);
-          if (saved.movements) setMovements(saved.movements);
-          if (saved.notifications) setNotifications(saved.notifications);
+        const catSnap = await getDocs(collection(db, 'categories'));
+        if (catSnap.empty) {
+          const batch = writeBatch(db);
+          initialCategories.forEach(({ id, ...rest }) => batch.set(doc(db, 'categories', id), rest));
+          initialProducts.forEach(({ id, ...rest }) => batch.set(doc(db, 'products', id), rest));
+          initialMovements.forEach(({ id, ...rest }) => batch.set(doc(db, 'movements', id), rest));
+          await batch.commit();
         }
+      } catch (e) {
+        console.log('Error inicializando datos en Firestore:', e);
       } finally {
-        setIsLoading(false);
+        setSeeded(true);
       }
     })();
   }, []);
 
-  // Guardar cada vez que cambie algo (después de la carga inicial)
+  // Escucha en tiempo real: cualquier cambio en Firestore actualiza la app al instante
   useEffect(() => {
-    if (isLoading) return;
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ categories, products, movements, notifications })
-    ).catch(() => {});
-  }, [categories, products, movements, notifications, isLoading]);
+    if (!seeded) return;
 
-  const addProduct = useCallback((p: Omit<Product, 'id'>) => {
-    const newProduct: Product = { ...p, id: `p-${Date.now()}` };
-    setProducts((prev) => [newProduct, ...prev]);
+    const unsubCategories = onSnapshot(collection(db, 'categories'), (snap) => {
+      setCategories(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Category)));
+    });
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
+      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Product)));
+      setIsLoading(false);
+    });
+    const unsubMovements = onSnapshot(
+      query(collection(db, 'movements'), orderBy('date', 'desc')),
+      (snap) => setMovements(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Movement)))
+    );
+    const unsubNotifications = onSnapshot(
+      query(collection(db, 'notifications'), orderBy('date', 'desc')),
+      (snap) => setNotifications(snap.docs.map((d) => ({ id: d.id, ...d.data() } as AppNotification)))
+    );
+
+    return () => {
+      unsubCategories();
+      unsubProducts();
+      unsubMovements();
+      unsubNotifications();
+    };
+  }, [seeded]);
+
+  const addProduct = useCallback(async (p: Omit<Product, 'id'>) => {
+    await addDoc(collection(db, 'products'), p);
   }, []);
 
-  const updateProduct = useCallback((id: string, p: Omit<Product, 'id'>) => {
-    setProducts((prev) => prev.map((item) => (item.id === id ? { ...p, id } : item)));
+  const updateProduct = useCallback(async (id: string, p: Omit<Product, 'id'>) => {
+    await updateDoc(doc(db, 'products', id), p as any);
   }, []);
 
-  const deleteProduct = useCallback((id: string) => {
-    setProducts((prev) => prev.filter((item) => item.id !== id));
+  const deleteProduct = useCallback(async (id: string) => {
+    await deleteDoc(doc(db, 'products', id));
   }, []);
 
-  const addCategory = useCallback((name: string, icon: string, color: string) => {
-    setCategories((prev) => [...prev, { id: `cat-${Date.now()}`, name, icon, color }]);
+  const addCategory = useCallback(async (name: string, icon: string, color: string) => {
+    await addDoc(collection(db, 'categories'), { name, icon, color });
   }, []);
 
-  const pushNotification = useCallback((n: Omit<AppNotification, 'id'>) => {
-    setNotifications((prev) => [{ ...n, id: `n-${Date.now()}` }, ...prev]);
+  const pushNotification = useCallback(async (n: Omit<AppNotification, 'id'>) => {
+    await addDoc(collection(db, 'notifications'), n);
   }, []);
 
   const registerEntrada = useCallback(
-    (productId: string, quantity: number, supplier: string, note?: string) => {
+    async (productId: string, quantity: number, supplier: string, note?: string) => {
       if (quantity <= 0) return { ok: false, error: 'La cantidad debe ser mayor a 0.' };
       const product = products.find((p) => p.id === productId);
       if (!product) return { ok: false, error: 'Selecciona un producto.' };
 
-      setProducts((prev) =>
-        prev.map((p) => (p.id === productId ? { ...p, quantity: p.quantity + quantity } : p))
-      );
-      setMovements((prev) => [
-        { id: `m-${Date.now()}`, type: 'entrada', productId, quantity, date: new Date().toISOString(), supplier, note },
-        ...prev,
-      ]);
-      pushNotification({
+      await updateDoc(doc(db, 'products', productId), { quantity: product.quantity + quantity });
+      await addDoc(collection(db, 'movements'), {
+        type: 'entrada',
+        productId,
+        quantity,
+        date: new Date().toISOString(),
+        supplier,
+        note: note ?? null,
+      });
+      await pushNotification({
         title: 'Nueva entrada',
         message: `Se registraron ${quantity} pzas. de "${product.name}".`,
         date: new Date().toISOString(),
@@ -141,7 +172,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   );
 
   const registerSalida = useCallback(
-    (productId: string, quantity: number, client: string, reason: 'venta' | 'uso_interno', note?: string) => {
+    async (productId: string, quantity: number, client: string, reason: 'venta' | 'uso_interno', note?: string) => {
       if (quantity <= 0) return { ok: false, error: 'La cantidad debe ser mayor a 0.' };
       const product = products.find((p) => p.id === productId);
       if (!product) return { ok: false, error: 'Selecciona un producto.' };
@@ -150,14 +181,17 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       }
 
       const newQuantity = product.quantity - quantity;
-      setProducts((prev) =>
-        prev.map((p) => (p.id === productId ? { ...p, quantity: newQuantity } : p))
-      );
-      setMovements((prev) => [
-        { id: `m-${Date.now()}`, type: 'salida', productId, quantity, date: new Date().toISOString(), client, reason, note },
-        ...prev,
-      ]);
-      pushNotification({
+      await updateDoc(doc(db, 'products', productId), { quantity: newQuantity });
+      await addDoc(collection(db, 'movements'), {
+        type: 'salida',
+        productId,
+        quantity,
+        date: new Date().toISOString(),
+        client,
+        reason,
+        note: note ?? null,
+      });
+      await pushNotification({
         title: 'Salida registrada',
         message: `Se registró una salida de ${quantity} pzas. de "${product.name}".`,
         date: new Date().toISOString(),
@@ -166,7 +200,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (newQuantity === 0) {
-        pushNotification({
+        await pushNotification({
           title: 'Sin stock',
           message: `El producto "${product.name}" se ha agotado.`,
           date: new Date().toISOString(),
@@ -174,7 +208,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           read: false,
         });
       } else if (newQuantity <= product.minStock) {
-        pushNotification({
+        await pushNotification({
           title: 'Stock bajo',
           message: `El producto "${product.name}" tiene solo ${newQuantity} pzas.`,
           date: new Date().toISOString(),
@@ -187,8 +221,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [products, pushNotification]
   );
 
-  const markNotificationRead = useCallback((id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const markNotificationRead = useCallback(async (id: string) => {
+    await updateDoc(doc(db, 'notifications', id), { read: true });
   }, []);
 
   const getProduct = useCallback((id: string) => products.find((p) => p.id === id), [products]);

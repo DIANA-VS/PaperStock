@@ -29,10 +29,10 @@ export default function NuevaSalida() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setGeneralError('');
     if (!validate()) return;
-    const result = registerSalida(productId, Number(quantity), client.trim(), tipo);
+    const result = await registerSalida(productId, Number(quantity), client.trim(), tipo);
     if (!result.ok) {
       setGeneralError(result.error ?? 'No se pudo registrar la salida.');
       return;

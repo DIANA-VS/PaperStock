@@ -20,12 +20,12 @@ export default function CategoriasScreen() {
 
   const countFor = (categoryId: string) => products.filter((p) => p.categoryId === categoryId).length;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       setError('El nombre de la categoría es obligatorio.');
       return;
     }
-    addCategory(name.trim(), icon, color);
+    await addCategory(name.trim(), icon, color);
     setName('');
     setIcon(ICON_OPTIONS[0]);
     setColor(COLOR_OPTIONS[0]);

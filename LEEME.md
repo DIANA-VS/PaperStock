@@ -1,14 +1,11 @@
 # PaperStock — Guía de instalación
 
-Este paquete contiene el código completo de la app (pantallas, componentes,
-contexto de datos y tema visual). Está pensado para **copiarse dentro de tu
-proyecto Expo existente** en `C:\Users\Diana\PaperStock`.
+Este paquete contiene el código completo de la app, **ya conectado a Firebase**
+(Authentication + Firestore) como base de datos en la nube.
 
 ## 1. Copiar archivos
 
-Copia estas carpetas dentro de tu proyecto, reemplazando lo que ya exista
-(si tu proyecto usa Expo Router, seguramente ya tienes una carpeta `app/`;
-revisa antes de sobrescribir si tenías algo propio ahí):
+Copia estas carpetas dentro de `src/` de tu proyecto (reemplazando lo que ya exista):
 
 ```
 PaperStock/
@@ -21,59 +18,57 @@ PaperStock/
 
 ## 2. Instalar dependencias
 
-Desde la raíz de tu proyecto (`C:\Users\Diana\PaperStock`), corre:
+Desde la raíz de tu proyecto, corre:
 
 ```bash
+npm install firebase
 npx expo install @react-native-async-storage/async-storage
 npx expo install expo-splash-screen
+npx expo install @expo/vector-icons
 npm install @expo-google-fonts/poppins expo-font
 ```
 
-`@expo/vector-icons` normalmente ya viene incluido con Expo; si no,
-instálalo con `npx expo install @expo/vector-icons`.
-
-## 3. Verificar app.json / app.config
-
-Asegúrate de que tu `app.json` tenga configurado el splash screen básico
-de Expo (ya viene por defecto en proyectos nuevos, no necesitas tocarlo).
-
-## 4. Correr el proyecto
+## 3. Correr el proyecto
 
 ```bash
 npx expo start
 ```
 
-## 5. Iniciar sesión
+## 4. Iniciar sesión
 
-El login es una validación básica local (no hay backend todavía): puedes
-entrar con cualquier correo y una contraseña de 4 caracteres o más, por
-ejemplo:
+El login ahora usa **cuentas reales de Firebase Authentication**. La primera
+vez que uses un correo, la app lo registra automáticamente (no necesitas
+crear la cuenta por separado). Requisitos:
 
-- Correo: `diana@paperstock.com`
-- Contraseña: `1234`
+- Correo válido (cualquiera, no se envía verificación).
+- Contraseña de **6 caracteres o más** (mínimo que exige Firebase).
 
-## ¿Qué incluye esta primera versión?
+Ejemplo: `diana@paperstock.com` / `123456`
 
-- **Login** con validación básica y persistencia de sesión.
-- **Dashboard** con resumen de inventario, movimientos recientes y accesos rápidos.
-- **Productos**: listar, buscar, filtrar por categoría, agregar, editar, eliminar y ver detalle.
-- **Categorías**: listar y agregar nuevas categorías con icono y color.
-- **Inventario**: vista independiente con buscador y filtros por estado (normal / bajo / sin stock), calculado automáticamente.
-- **Entradas**: listar y registrar, sumando al stock del producto.
-- **Salidas**: listar y registrar, restando del stock y bloqueando cantidades mayores al disponible.
-- **Alertas de stock**: productos con stock bajo o sin existencia.
-- **Notificaciones**: avisos automáticos generados por el sistema (entradas, salidas, stock bajo, sin stock).
-- **Perfil**: datos básicos del usuario y cerrar sesión.
+La segunda vez que uses ese mismo correo y contraseña, inicia sesión con la
+cuenta ya creada. Puedes ver los usuarios registrados en Firebase Console →
+Authentication → Usuarios.
 
-Todos los datos (productos, categorías, movimientos, notificaciones) se
-guardan localmente en el dispositivo con AsyncStorage, así que persisten
-aunque cierres la app. No hay servidor ni base de datos remota — es
-suficiente para un proyecto académico funcional.
+## ¿Qué cambió respecto a la versión anterior?
 
-## Siguientes pasos sugeridos
+- **Antes**: los datos se guardaban solo en el celular (AsyncStorage).
+- **Ahora**: los datos viven en **Firestore**, la base de datos en la nube de
+  Firebase. Esto significa que:
+  - Si abres la app desde otro dispositivo con la misma base de Firebase,
+    verás la misma información.
+  - Los cambios se sincronizan en tiempo real.
+  - El login es una cuenta real (no una simulación).
+  - "Cambiar contraseña" ahora sí actualiza tu contraseña real.
+  - "Editar perfil" solo permite cambiar el nombre (el correo no se puede
+    editar por seguridad de la cuenta).
 
-1. Prueba la app tal como está y dime qué necesitas ajustar (colores, textos, flujo).
-2. Si más adelante quieres un backend real (por ejemplo con Firebase o una API),
-   lo agregamos como un módulo aparte sin tener que rehacer las pantallas.
-3. Podemos revisar módulo por módulo cualquier detalle visual para que quede
-   más parecido aún al mockup que compartiste.
+## Importante sobre las reglas de Firestore
+
+Tu base de datos quedó en "modo de prueba", lo que permite lectura y
+escritura sin restricciones hasta la fecha que configuraste (revísala en
+Firebase Console → Firestore Database → Reglas). Después de esa fecha, la
+app dejará de poder leer/escribir datos hasta que actualices las reglas.
+Para un proyecto académico esto es suficiente, pero si vas a seguir usando
+la app después de esa fecha, avísame para configurar reglas de seguridad
+permanentes.
+
