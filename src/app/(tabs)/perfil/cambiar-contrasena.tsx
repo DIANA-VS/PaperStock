@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { updatePassword } from 'firebase/auth';
-import { auth } from '../../../constants/firebaseConfig';
+import { supabase } from '../../../constants/supabaseConfig';
 import { colors, fonts, spacing } from '../../../constants/theme';
 import FormField from '../../../components/FormField';
 import PrimaryButton from '../../../components/PrimaryButton';
@@ -26,26 +25,31 @@ export default function CambiarContrasena() {
   const handleSave = async () => {
     if (!validate()) return;
     try {
-      const user = auth.currentUser;
-      if (!user || !user.email) {
+      const { data: userData } = await supabase.auth.getUser();
+      const email = userData.user?.email;
+      if (!email) {
         Alert.alert('Error', 'No se encontró tu sesión activa.');
         return;
       }
-      const { EmailAuthProvider, reauthenticateWithCredential } = await import('firebase/auth');
-      const credential = EmailAuthProvider.credential(user.email, current);
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, nueva);
+
+      // Confirma la contraseña actual volviendo a iniciar sesión con ella
+      const { error: reauthError } = await supabase.auth.signInWithPassword({ email, password: current });
+      if (reauthError) {
+        setErrors({ current: 'Tu contraseña actual no es correcta.' });
+        return;
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: nueva });
+      if (updateError) {
+        Alert.alert('Error', 'No se pudo actualizar la contraseña. Intenta de nuevo.');
+        return;
+      }
+
       Alert.alert('Listo', 'Tu contraseña se actualizó correctamente.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (err: any) {
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setErrors({ current: 'Tu contraseña actual no es correcta.' });
-      } else if (err.code === 'auth/weak-password') {
-        setErrors({ nueva: 'La contraseña debe tener al menos 6 caracteres.' });
-      } else {
-        Alert.alert('Error', 'No se pudo actualizar la contraseña. Intenta de nuevo.');
-      }
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo actualizar la contraseña. Intenta de nuevo.');
     }
   };
 

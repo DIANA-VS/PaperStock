@@ -64,6 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="categorias" options={{ href: null }} />
       <Tabs.Screen name="alertas" options={{ href: null }} />
       <Tabs.Screen name="notificaciones" options={{ href: null }} />
+      <Tabs.Screen name="consultas-sql" options={{ href: null }} />
     </Tabs>
   );
 }

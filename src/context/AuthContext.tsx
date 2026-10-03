@@ -1,12 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  updateProfile as firebaseUpdateProfile,
-} from 'firebase/auth';
-import { auth } from '../constants/firebaseConfig';
+import { supabase } from '../constants/supabaseConfig';
 import { UserProfile } from '../types';
 
 interface AuthContextType {
@@ -20,24 +13,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function translateError(code?: string) {
-  switch (code) {
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential':
-      return 'Correo o contraseña incorrectos.';
-    case 'auth/invalid-email':
-      return 'El correo no es válido.';
-    case 'auth/weak-password':
-      return 'La contraseña debe tener al menos 6 caracteres.';
-    case 'auth/email-already-in-use':
-      return 'Ese correo ya está registrado con otra contraseña.';
-    case 'auth/network-request-failed':
-      return 'No hay conexión a internet. Revisa tu WiFi/datos.';
-    case 'auth/too-many-requests':
-      return 'Demasiados intentos. Espera un momento e intenta de nuevo.';
-    default:
-      return 'No se pudo iniciar sesión. Intenta de nuevo.';
-  }
+function translateError(message?: string) {
+  if (!message) return 'No se pudo iniciar sesión. Intenta de nuevo.';
+  if (message.includes('Invalid login credentials')) return 'Correo o contraseña incorrectos.';
+  if (message.includes('Password should be at least')) return 'La contraseña debe tener al menos 6 caracteres.';
+  if (message.includes('User already registered')) return 'Ese correo ya está registrado con otra contraseña.';
+  if (message.includes('Unable to validate email')) return 'El correo no es válido.';
+  if (message.includes('Network')) return 'No hay conexión a internet.';
+  return 'No se pudo iniciar sesión. Intenta de nuevo.';
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -46,22 +29,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
-      if (fbUser) {
-        setUser({
-          name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Usuario',
-          email: fbUser.email || '',
-          role: 'Administrador',
-        });
-        setIsLoggedIn(true);
-      } else {
-        setUser(null);
-        setIsLoggedIn(false);
-      }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      applySession(session);
       setIsLoading(false);
     });
-    return unsubscribe;
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      applySession(session);
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
+
+  const applySession = (session: any) => {
+    if (session?.user) {
+      const metaName = session.user.user_metadata?.name as string | undefined;
+      setUser({
+        name: metaName || session.user.email?.split('@')[0] || 'Usuario',
+        email: session.user.email || '',
+        role: 'Administrador',
+      });
+      setIsLoggedIn(true);
+    } else {
+      setUser(null);
+      setIsLoggedIn(false);
+    }
+  };
 
   const login = async (email: string, password: string) => {
     if (!email.trim() || !password.trim()) {
@@ -71,35 +64,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres.' };
     }
 
-    try {
-      // Primero intenta iniciar sesión con una cuenta existente
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (!signInError) return { ok: true };
+
+    // Si no existe la cuenta, la creamos automáticamente (igual que antes)
+    if (signInError.message.includes('Invalid login credentials')) {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { name: email.split('@')[0] } },
+      });
+      if (signUpError) return { ok: false, error: translateError(signUpError.message) };
       return { ok: true };
-    } catch (err: any) {
-      // Si la cuenta no existe todavía, la creamos automáticamente
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        try {
-          const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-          await firebaseUpdateProfile(credential.user, {
-            displayName: email.split('@')[0],
-          });
-          return { ok: true };
-        } catch (createErr: any) {
-          return { ok: false, error: translateError(createErr.code) };
-        }
-      }
-      return { ok: false, error: translateError(err.code) };
     }
+
+    return { ok: false, error: translateError(signInError.message) };
   };
 
   const logout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
   };
 
   const updateProfile = async (name: string, email: string) => {
-    if (!auth.currentUser) return;
-    await firebaseUpdateProfile(auth.currentUser, { displayName: name });
-    setUser((prev) => (prev ? { ...prev, name, email } : prev));
+    const { error } = await supabase.auth.updateUser({ data: { name } });
+    if (!error) {
+      setUser((prev) => (prev ? { ...prev, name, email } : prev));
+    }
   };
 
   return (

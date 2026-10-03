@@ -1,17 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import {
-  collection,
-  onSnapshot,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDocs,
-  writeBatch,
-  query,
-  orderBy,
-} from 'firebase/firestore';
-import { db } from '../constants/firebaseConfig';
+import { supabase } from '../constants/supabaseConfig';
 import {
   Category,
   Product,
@@ -20,33 +8,49 @@ import {
   getStockStatus,
 } from '../types';
 
-const initialCategories: (Category & { id: string })[] = [
-  { id: 'cat-1', name: 'Cuadernos', icon: 'book-outline', color: '#C8E6C9' },
-  { id: 'cat-2', name: 'Escritura', icon: 'pencil-outline', color: '#A7D8FF' },
-  { id: 'cat-3', name: 'Colores', icon: 'color-palette-outline', color: '#FFD6E7' },
-  { id: 'cat-4', name: 'Material escolar', icon: 'school-outline', color: '#FFEBA3' },
-  { id: 'cat-5', name: 'Geometría', icon: 'triangle-outline', color: '#D9CFF5' },
-  { id: 'cat-6', name: 'Papel', icon: 'document-outline', color: '#FFD6E7' },
-  { id: 'cat-7', name: 'Oficina', icon: 'briefcase-outline', color: '#A7D8FF' },
-  { id: 'cat-8', name: 'Impresión', icon: 'print-outline', color: '#C8E6C9' },
-];
+// ---- Helpers para convertir entre snake_case (SQL) y camelCase (TypeScript) ----
 
-const initialProducts: (Product & { id: string })[] = [
-  { id: 'p-1', name: 'Cuaderno profesional', categoryId: 'cat-1', description: 'Cuaderno de 100 hojas, raya', price: 45, quantity: 50, minStock: 10, supplier: 'Papelería Luna' },
-  { id: 'p-2', name: 'Pluma de gel', categoryId: 'cat-2', description: 'Pluma de gel punto fino, negra', price: 12, quantity: 25, minStock: 10, supplier: 'Distribuidora escolar' },
-  { id: 'p-3', name: 'Resaltador amarillo', categoryId: 'cat-2', description: 'Resaltador punta biselada', price: 15, quantity: 4, minStock: 8, supplier: 'Distribuidora escolar' },
-  { id: 'p-4', name: 'Cartulina blanca', categoryId: 'cat-6', description: 'Cartulina tamaño carta', price: 32, quantity: 0, minStock: 5, supplier: 'Papelería del Centro' },
-  { id: 'p-5', name: 'Colores de madera', categoryId: 'cat-3', description: 'Caja de 24 colores', price: 28, quantity: 18, minStock: 6, supplier: 'Distribuidora escolar' },
-  { id: 'p-6', name: 'Goma', categoryId: 'cat-7', description: 'Goma blanca para borrar', price: 8, quantity: 12, minStock: 5, supplier: 'Papelería Luna' },
-  { id: 'p-7', name: 'Lápices de colores', categoryId: 'cat-3', description: 'Paquete de 12 lápices', price: 22, quantity: 6, minStock: 10, supplier: 'Distribuidora escolar' },
-  { id: 'p-8', name: 'Plumones', categoryId: 'cat-2', description: 'Set de 6 plumones', price: 30, quantity: 10, minStock: 12, supplier: 'Papelería del Centro' },
-];
+function rowToCategory(row: any): Category {
+  return { id: row.id, name: row.name, icon: row.icon, color: row.color };
+}
 
-const initialMovements: (Movement & { id: string })[] = [
-  { id: 'm-1', type: 'entrada', productId: 'p-1', quantity: 30, date: new Date('2026-09-10').toISOString(), supplier: 'Papelería Luna', note: 'Compra #0001' },
-  { id: 'm-2', type: 'salida', productId: 'p-2', quantity: 5, date: new Date('2026-09-09').toISOString(), client: 'Cliente mostrador', reason: 'venta' },
-  { id: 'm-3', type: 'entrada', productId: 'p-5', quantity: 20, date: new Date('2026-09-07').toISOString(), supplier: 'Distribuidora escolar', note: 'Compra #0003' },
-];
+function rowToProduct(row: any): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    categoryId: row.category_id,
+    description: row.description ?? undefined,
+    price: Number(row.price),
+    quantity: row.quantity,
+    minStock: row.min_stock,
+    supplier: row.supplier ?? undefined,
+  };
+}
+
+function rowToMovement(row: any): Movement {
+  return {
+    id: row.id,
+    type: row.type,
+    productId: row.product_id,
+    quantity: row.quantity,
+    date: row.date,
+    note: row.note ?? undefined,
+    supplier: row.supplier ?? undefined,
+    client: row.client ?? undefined,
+    reason: row.reason ?? undefined,
+  };
+}
+
+function rowToNotification(row: any): AppNotification {
+  return {
+    id: row.id,
+    title: row.title,
+    message: row.message,
+    date: row.date,
+    type: row.type,
+    read: row.read,
+  };
+}
 
 interface InventoryContextType {
   categories: Category[];
@@ -73,75 +77,81 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [seeded, setSeeded] = useState(false);
 
-  // La primera vez que alguien abre la app, si la base de datos está vacía,
-  // la llenamos con datos de ejemplo para que no arranque vacía.
-  useEffect(() => {
-    (async () => {
-      try {
-        const catSnap = await getDocs(collection(db, 'categories'));
-        if (catSnap.empty) {
-          const batch = writeBatch(db);
-          initialCategories.forEach(({ id, ...rest }) => batch.set(doc(db, 'categories', id), rest));
-          initialProducts.forEach(({ id, ...rest }) => batch.set(doc(db, 'products', id), rest));
-          initialMovements.forEach(({ id, ...rest }) => batch.set(doc(db, 'movements', id), rest));
-          await batch.commit();
-        }
-      } catch (e) {
-        console.log('Error inicializando datos en Firestore:', e);
-      } finally {
-        setSeeded(true);
-      }
-    })();
+  const reloadAll = useCallback(async () => {
+    const [catRes, prodRes, movRes, notifRes] = await Promise.all([
+      supabase.from('categories').select('*').order('name'),
+      supabase.from('products').select('*').order('name'),
+      supabase.from('movements').select('*').order('date', { ascending: false }),
+      supabase.from('notifications').select('*').order('date', { ascending: false }),
+    ]);
+    if (catRes.data) setCategories(catRes.data.map(rowToCategory));
+    if (prodRes.data) setProducts(prodRes.data.map(rowToProduct));
+    if (movRes.data) setMovements(movRes.data.map(rowToMovement));
+    if (notifRes.data) setNotifications(notifRes.data.map(rowToNotification));
+    setIsLoading(false);
   }, []);
 
-  // Escucha en tiempo real: cualquier cambio en Firestore actualiza la app al instante
+  // Carga inicial + suscripción en tiempo real a cambios en las 4 tablas
   useEffect(() => {
-    if (!seeded) return;
+    reloadAll();
 
-    const unsubCategories = onSnapshot(collection(db, 'categories'), (snap) => {
-      setCategories(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Category)));
-    });
-    const unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Product)));
-      setIsLoading(false);
-    });
-    const unsubMovements = onSnapshot(
-      query(collection(db, 'movements'), orderBy('date', 'desc')),
-      (snap) => setMovements(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Movement)))
-    );
-    const unsubNotifications = onSnapshot(
-      query(collection(db, 'notifications'), orderBy('date', 'desc')),
-      (snap) => setNotifications(snap.docs.map((d) => ({ id: d.id, ...d.data() } as AppNotification)))
-    );
+    const channel = supabase
+      .channel('paperstock-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'movements' }, reloadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, reloadAll)
+      .subscribe();
 
     return () => {
-      unsubCategories();
-      unsubProducts();
-      unsubMovements();
-      unsubNotifications();
+      supabase.removeChannel(channel);
     };
-  }, [seeded]);
+  }, [reloadAll]);
 
   const addProduct = useCallback(async (p: Omit<Product, 'id'>) => {
-    await addDoc(collection(db, 'products'), p);
+    await supabase.from('products').insert({
+      name: p.name,
+      category_id: p.categoryId,
+      description: p.description ?? null,
+      price: p.price,
+      quantity: p.quantity,
+      min_stock: p.minStock,
+      supplier: p.supplier ?? null,
+    });
   }, []);
 
   const updateProduct = useCallback(async (id: string, p: Omit<Product, 'id'>) => {
-    await updateDoc(doc(db, 'products', id), p as any);
+    await supabase
+      .from('products')
+      .update({
+        name: p.name,
+        category_id: p.categoryId,
+        description: p.description ?? null,
+        price: p.price,
+        quantity: p.quantity,
+        min_stock: p.minStock,
+        supplier: p.supplier ?? null,
+      })
+      .eq('id', id);
   }, []);
 
   const deleteProduct = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'products', id));
+    await supabase.from('products').delete().eq('id', id);
   }, []);
 
   const addCategory = useCallback(async (name: string, icon: string, color: string) => {
-    await addDoc(collection(db, 'categories'), { name, icon, color });
+    await supabase.from('categories').insert({ name, icon, color });
   }, []);
 
   const pushNotification = useCallback(async (n: Omit<AppNotification, 'id'>) => {
-    await addDoc(collection(db, 'notifications'), n);
+    await supabase.from('notifications').insert({
+      title: n.title,
+      message: n.message,
+      date: n.date,
+      type: n.type,
+      read: n.read,
+    });
   }, []);
 
   const registerEntrada = useCallback(
@@ -150,10 +160,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const product = products.find((p) => p.id === productId);
       if (!product) return { ok: false, error: 'Selecciona un producto.' };
 
-      await updateDoc(doc(db, 'products', productId), { quantity: product.quantity + quantity });
-      await addDoc(collection(db, 'movements'), {
+      await supabase.from('products').update({ quantity: product.quantity + quantity }).eq('id', productId);
+      await supabase.from('movements').insert({
         type: 'entrada',
-        productId,
+        product_id: productId,
         quantity,
         date: new Date().toISOString(),
         supplier,
@@ -166,9 +176,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         type: 'entrada',
         read: false,
       });
+      await reloadAll();
       return { ok: true };
     },
-    [products, pushNotification]
+    [products, pushNotification, reloadAll]
   );
 
   const registerSalida = useCallback(
@@ -181,10 +192,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       }
 
       const newQuantity = product.quantity - quantity;
-      await updateDoc(doc(db, 'products', productId), { quantity: newQuantity });
-      await addDoc(collection(db, 'movements'), {
+      await supabase.from('products').update({ quantity: newQuantity }).eq('id', productId);
+      await supabase.from('movements').insert({
         type: 'salida',
-        productId,
+        product_id: productId,
         quantity,
         date: new Date().toISOString(),
         client,
@@ -216,13 +227,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           read: false,
         });
       }
+      await reloadAll();
       return { ok: true };
     },
-    [products, pushNotification]
+    [products, pushNotification, reloadAll]
   );
 
   const markNotificationRead = useCallback(async (id: string) => {
-    await updateDoc(doc(db, 'notifications', id), { read: true });
+    await supabase.from('notifications').update({ read: true }).eq('id', id);
   }, []);
 
   const getProduct = useCallback((id: string) => products.find((p) => p.id === id), [products]);

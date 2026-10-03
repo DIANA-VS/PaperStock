@@ -7,9 +7,11 @@ import {
   Platform,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../constants/supabaseConfig';
 import { useAuth } from '../context/AuthContext';
 import { colors, fonts, radius, spacing } from '../constants/theme';
 import FormField from '../components/FormField';
@@ -33,6 +35,25 @@ export default function Login() {
       return;
     }
     router.replace('/(tabs)');
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      Alert.alert(
+        'Ingresa tu correo',
+        'Escribe tu correo en el campo de arriba y vuelve a tocar "¿Olvidaste tu contraseña?" para enviarte el enlace de recuperación.'
+      );
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    if (error) {
+      Alert.alert('Error', 'No se pudo enviar el correo de recuperación. Intenta de nuevo.');
+      return;
+    }
+    Alert.alert(
+      'Correo enviado',
+      `Si existe una cuenta con ${email.trim()}, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada (y spam).`
+    );
   };
 
   return (
@@ -77,7 +98,9 @@ export default function Login() {
 
         <PrimaryButton title="Iniciar sesión" onPress={handleLogin} loading={loading} style={{ marginTop: spacing.sm }} />
 
-        <Text style={styles.helper}>¿Olvidaste tu contraseña?</Text>
+        <Pressable onPress={handleForgotPassword}>
+          <Text style={styles.helper}>¿Olvidaste tu contraseña?</Text>
+        </Pressable>
         <Text style={styles.helperMuted}>
           ¿No tienes una cuenta? <Text style={styles.link}>Contacta al administrador</Text>
         </Text>

@@ -104,6 +104,7 @@ export default function Dashboard() {
         <QuickAccess icon="arrow-up-circle-outline" label="Salidas" color={colors.yellowPastel} onPress={() => router.push('/(tabs)/salidas')} />
         <QuickAccess icon="pricetags-outline" label="Categorías" color={colors.lavender} onPress={() => router.push('/(tabs)/categorias')} />
         <QuickAccess icon="warning-outline" label="Alertas" color={colors.gray} onPress={() => router.push('/(tabs)/alertas')} />
+        <QuickAccess icon="code-slash-outline" label="Consultas SQL" color={colors.bluePastel} onPress={() => router.push('/(tabs)/consultas-sql')} />
       </View>
     </ScrollView>
   );
