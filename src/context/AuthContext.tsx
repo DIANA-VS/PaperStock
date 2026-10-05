@@ -29,8 +29,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      await applySession(session);
       setIsLoading(false);
     });
 
@@ -41,13 +41,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const applySession = (session: any) => {
+  const applySession = async (session: any) => {
     if (session?.user) {
       const metaName = session.user.user_metadata?.name as string | undefined;
+
+      // Consulta el rol real del usuario en la tabla profiles (empleado por defecto)
+      let role = 'Empleado';
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (profile?.role === 'administrador') role = 'Administrador';
+      else if (profile?.role === 'empleado') role = 'Empleado';
+
       setUser({
         name: metaName || session.user.email?.split('@')[0] || 'Usuario',
         email: session.user.email || '',
-        role: 'Administrador',
+        role,
       });
       setIsLoggedIn(true);
     } else {

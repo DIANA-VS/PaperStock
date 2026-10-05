@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../../../context/InventoryContext';
+import { useAuth } from '../../../context/AuthContext';
 import { colors, fonts, radius, spacing } from '../../../constants/theme';
 import SearchBar from '../../../components/SearchBar';
 import FilterChip from '../../../components/FilterChip';
@@ -11,6 +12,8 @@ import EmptyState from '../../../components/EmptyState';
 
 export default function ProductosScreen() {
   const { products, categories } = useInventory();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Administrador';
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('todos');
 
@@ -26,9 +29,13 @@ export default function ProductosScreen() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.title}>Productos</Text>
-        <Pressable style={styles.addButton} onPress={() => router.push('/(tabs)/productos/agregar')}>
-          <Ionicons name="add" size={22} color="#fff" />
-        </Pressable>
+        {isAdmin ? (
+          <Pressable style={styles.addButton} onPress={() => router.push('/(tabs)/productos/agregar')}>
+            <Ionicons name="add" size={22} color="#fff" />
+          </Pressable>
+        ) : (
+          <View style={styles.addButton_placeholder} />
+        )}
       </View>
 
       <View style={{ paddingHorizontal: spacing.lg }}>
@@ -84,5 +91,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  addButton_placeholder: {
+    width: 40,
+    height: 40,
   },
 });

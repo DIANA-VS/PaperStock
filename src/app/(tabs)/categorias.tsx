@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable, Modal } from 'react-native
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../../context/InventoryContext';
+import { useAuth } from '../../context/AuthContext';
 import { colors, fonts, radius, shadow, spacing } from '../../constants/theme';
 import FormField from '../../components/FormField';
 import PrimaryButton from '../../components/PrimaryButton';
@@ -12,6 +13,8 @@ const COLOR_OPTIONS = [colors.bluePastel, colors.greenPastel, colors.pinkPastel,
 
 export default function CategoriasScreen() {
   const { categories, products, addCategory } = useInventory();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Administrador';
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(ICON_OPTIONS[0]);
@@ -40,9 +43,13 @@ export default function CategoriasScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.textDark} />
         </Pressable>
         <Text style={styles.title}>Categorías</Text>
-        <Pressable onPress={() => setModalVisible(true)} style={styles.iconBtn}>
-          <Ionicons name="add-circle" size={26} color={colors.primary} />
-        </Pressable>
+        {isAdmin ? (
+          <Pressable onPress={() => setModalVisible(true)} style={styles.iconBtn}>
+            <Ionicons name="add-circle" size={26} color={colors.primary} />
+          </Pressable>
+        ) : (
+          <View style={styles.iconBtn} />
+        )}
       </View>
 
       <FlatList

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert, KeyboardAvoidingV
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useInventory } from '../../../context/InventoryContext';
+import { useAuth } from '../../../context/AuthContext';
 import { colors, fonts, spacing } from '../../../constants/theme';
 import FormField from '../../../components/FormField';
 import SelectField from '../../../components/SelectField';
@@ -13,6 +14,8 @@ import { getStockStatus } from '../../../types';
 export default function DetalleProducto() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getProduct, categories, updateProduct, deleteProduct } = useInventory();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'Administrador';
   const product = getProduct(id);
 
   const [editMode, setEditMode] = useState(false);
@@ -88,9 +91,13 @@ export default function DetalleProducto() {
           <Ionicons name="arrow-back" size={22} color={colors.textDark} />
         </Pressable>
         <Text style={styles.title}>{editMode ? 'Editar producto' : 'Producto'}</Text>
-        <Pressable onPress={() => (editMode ? handleSave() : setEditMode(true))} style={styles.iconBtn}>
-          <Ionicons name={editMode ? 'checkmark' : 'create-outline'} size={22} color={colors.primary} />
-        </Pressable>
+        {isAdmin ? (
+          <Pressable onPress={() => (editMode ? handleSave() : setEditMode(true))} style={styles.iconBtn}>
+            <Ionicons name={editMode ? 'checkmark' : 'create-outline'} size={22} color={colors.primary} />
+          </Pressable>
+        ) : (
+          <View style={styles.iconBtn} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xl }} keyboardShouldPersistTaps="handled">
@@ -131,7 +138,12 @@ export default function DetalleProducto() {
               ) : null}
             </View>
 
-            <PrimaryButton title="Eliminar producto" variant="danger" onPress={handleDelete} style={{ marginTop: spacing.lg }} />
+            {isAdmin && (
+              <PrimaryButton title="Eliminar producto" variant="danger" onPress={handleDelete} style={{ marginTop: spacing.lg }} />
+            )}
+            {!isAdmin && (
+              <Text style={styles.notFound}>Solo un administrador puede editar o eliminar productos.</Text>
+            )}
           </>
         ) : (
           <>
